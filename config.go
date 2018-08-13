@@ -25,6 +25,7 @@ type frozenConfig struct {
 	extDecoders   sync.Map
 	extEncoders   sync.Map
 	staticCodegen bool
+	boolMapAsSet  bool
 }
 
 func (cfg Config) AddExtension(extension spi.Extension) Config {
@@ -39,6 +40,7 @@ func (cfg Config) Froze() API {
 		extension:     extensions,
 		protocol:      cfg.Protocol,
 		staticCodegen: cfg.StaticCodegen,
+		boolMapAsSet:  !cfg.DisableBoolMapAsSet,
 	}
 	api.extDecoders = sync.Map{}
 	api.genDecoders = sync.Map{}
@@ -166,7 +168,7 @@ func (cfg *frozenConfig) decoderOf(valType reflect.Type) spi.ValDecoder {
 	if cfg.staticCodegen {
 		return cfg.staticDecoderOf(valType)
 	}
-	return reflection.DecoderOf(cfg.extension, valType)
+	return reflection.DecoderOf(cfg.extension, valType, cfg.boolMapAsSet)
 }
 
 func (cfg *frozenConfig) staticDecoderOf(valType reflect.Type) spi.ValDecoder {
@@ -186,7 +188,7 @@ func (cfg *frozenConfig) encoderOf(valType reflect.Type) spi.ValEncoder {
 	if cfg.staticCodegen {
 		return cfg.staticEncoderOf(valType)
 	}
-	return reflection.EncoderOf(cfg.extension, valType)
+	return reflection.EncoderOf(cfg.extension, valType, cfg.boolMapAsSet)
 }
 
 func (cfg *frozenConfig) staticEncoderOf(valType reflect.Type) spi.ValEncoder {

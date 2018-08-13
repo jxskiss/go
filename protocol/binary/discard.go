@@ -19,6 +19,8 @@ func (iter *Iterator) Discard(ttype protocol.TType) {
 		iter.SkipBinary(nil)
 	case protocol.TypeList:
 		spi.DiscardList(iter)
+	case protocol.TypeSet:
+		spi.DiscardSet(iter)
 	case protocol.TypeStruct:
 		spi.DiscardStruct(iter)
 	case protocol.TypeMap:

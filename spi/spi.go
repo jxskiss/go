@@ -19,6 +19,8 @@ type Iterator interface {
 	SkipStruct(space []byte) []byte
 	ReadListHeader() (elemType protocol.TType, size int)
 	SkipList(space []byte) []byte
+	ReadSetHeader() (elemType protocol.TType, size int)
+	SkipSet(space []byte) []byte
 	ReadMapHeader() (keyType protocol.TType, elemType protocol.TType, size int)
 	SkipMap(space []byte) []byte
 	ReadBool() bool
@@ -51,6 +53,7 @@ type Stream interface {
 	Write(buf []byte) error
 	WriteMessageHeader(header protocol.MessageHeader)
 	WriteListHeader(elemType protocol.TType, length int)
+	WriteSetHeader(elemType protocol.TType, length int)
 	WriteStructHeader()
 	WriteStructField(fieldType protocol.TType, fieldId protocol.FieldId)
 	WriteStructFieldStop()

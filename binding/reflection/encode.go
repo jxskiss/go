@@ -7,7 +7,7 @@ import (
 	"unsafe"
 )
 
-func EncoderOf(extension spi.Extension, valType reflect.Type) spi.ValEncoder {
+func EncoderOf(extension spi.Extension, valType reflect.Type, boolMapAsSet bool) spi.ValEncoder {
 	isPtr := valType.Kind() == reflect.Ptr
 	isOnePtrArray := valType.Kind() == reflect.Array && valType.Len() == 1 &&
 		valType.Elem().Kind() == reflect.Ptr
@@ -16,12 +16,12 @@ func EncoderOf(extension spi.Extension, valType reflect.Type) spi.ValEncoder {
 	isOneMapStruct := valType.Kind() == reflect.Struct && valType.NumField() == 1 &&
 		valType.Field(0).Type.Kind() == reflect.Map
 	if isPtr || isOnePtrArray || isOnePtrStruct || isOneMapStruct {
-		return &ptrEncoderAdapter{encoderOf(extension, "", valType)}
+		return &ptrEncoderAdapter{encoderOf(extension, "", valType, boolMapAsSet)}
 	}
-	return &valEncoderAdapter{encoderOf(extension, "", valType)}
+	return &valEncoderAdapter{encoderOf(extension, "", valType, boolMapAsSet)}
 }
 
-func encoderOf(extension spi.Extension, prefix string, valType reflect.Type) internalEncoder {
+func encoderOf(extension spi.Extension, prefix string, valType reflect.Type, boolMapAsSet bool) internalEncoder {
 	extEncoder := extension.EncoderOf(valType)
 	if extEncoder != nil {
 		valObj := reflect.New(valType).Elem().Interface()
@@ -67,15 +67,21 @@ func encoderOf(extension spi.Extension, prefix string, valType reflect.Type) int
 		return &sliceEncoder{
 			sliceType:   valType,
 			elemType:    valType.Elem(),
-			elemEncoder: encoderOf(extension, prefix+" [sliceElem]", valType.Elem()),
+			elemEncoder: encoderOf(extension, prefix+" [sliceElem]", valType.Elem(), boolMapAsSet),
 		}
 	case reflect.Map:
 		sampleObj := reflect.New(valType).Elem().Interface()
-		return &mapEncoder{
-			keyEncoder:   encoderOf(extension, prefix+" [mapKey]", valType.Key()),
-			elemEncoder:  encoderOf(extension, prefix+" [mapElem]", valType.Elem()),
+		encoder := &mapEncoder{
+			keyEncoder:   encoderOf(extension, prefix+" [mapKey]", valType.Key(), boolMapAsSet),
+			elemEncoder:  encoderOf(extension, prefix+" [mapElem]", valType.Elem(), boolMapAsSet),
 			mapInterface: *(*emptyInterface)(unsafe.Pointer(&sampleObj)),
+			tType:        protocol.TypeMap,
 		}
+		// FIXME: is there any reasonable way to auto distinct map and set?
+		if boolMapAsSet && valType.Elem().Kind() == reflect.Bool {
+			encoder.tType = protocol.TypeSet
+		}
+		return encoder
 	case reflect.Struct:
 		encoderFields := make([]structEncoderField, 0, valType.NumField())
 		for i := 0; i < valType.NumField(); i++ {
@@ -87,7 +93,10 @@ func encoderOf(extension spi.Extension, prefix string, valType reflect.Type) int
 			encoderField := structEncoderField{
 				offset:  refField.Offset,
 				fieldId: fieldId,
-				encoder: encoderOf(extension, prefix+" "+refField.Name, refField.Type),
+				encoder: encoderOf(extension, prefix+" "+refField.Name, refField.Type, boolMapAsSet),
+			}
+			if mEnc, ok := encoderField.encoder.(*mapEncoder); ok {
+				mEnc.tType = parseMapType(refField)
 			}
 			encoderFields = append(encoderFields, encoderField)
 		}
@@ -97,7 +106,7 @@ func encoderOf(extension spi.Extension, prefix string, valType reflect.Type) int
 	case reflect.Ptr:
 		return &pointerEncoder{
 			valType:    valType.Elem(),
-			valEncoder: encoderOf(extension, prefix+" [ptrElem]", valType.Elem()),
+			valEncoder: encoderOf(extension, prefix+" [ptrElem]", valType.Elem(), boolMapAsSet),
 		}
 	}
 	return &unknownEncoder{prefix, valType}

@@ -84,6 +84,14 @@ func (stream *Stream) WriteMessageHeader(header protocol.MessageHeader) {
 }
 
 func (stream *Stream) WriteListHeader(elemType protocol.TType, length int) {
+	stream.writeCollectionHeader(elemType, length)
+}
+
+func (stream *Stream) WriteSetHeader(elemType protocol.TType, length int) {
+	stream.writeCollectionHeader(elemType, length)
+}
+
+func (stream *Stream) writeCollectionHeader(elemType protocol.TType, length int) {
 	if length <= 14 {
 		stream.WriteUint8(uint8(int32(length<<4) | int32(compactTypes[elemType])))
 		return

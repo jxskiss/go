@@ -32,6 +32,15 @@ func (obj Map) Get(path ...interface{}) interface{} {
 	return elem.(Object).Get(path[1:]...)
 }
 
+type Set map[interface{}]bool
+
+func(obj Set) Get(path ...interface{}) interface{} {
+	if len(path) == 0 {
+		return obj
+	}
+	return obj[path[0]]
+}
+
 type Struct map[protocol.FieldId]interface{}
 
 func (obj Struct) Get(path ...interface{}) interface{} {

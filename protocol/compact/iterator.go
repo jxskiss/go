@@ -194,6 +194,14 @@ func (iter *Iterator) ReadStructField() (fieldType protocol.TType, fieldId proto
 }
 
 func (iter *Iterator) ReadListHeader() (elemType protocol.TType, size int) {
+	return iter.readCollectionHeader()
+}
+
+func (iter *Iterator) ReadSetHeader() (elemType protocol.TType, size int) {
+	return iter.readCollectionHeader()
+}
+
+func (iter *Iterator) readCollectionHeader() (elemType protocol.TType, size int) {
 	lenAndType := iter.readByte()
 	length := int((lenAndType >> 4) & 0x0f)
 	if length == 15 {

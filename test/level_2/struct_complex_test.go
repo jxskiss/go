@@ -62,6 +62,23 @@ func Test_marshal_struct_complex(t *testing.T) {
 			}},
 		}
 		obj.Rp = &obj.Rv
+		obj.Sv = map[int32]bool{
+			3701: true,
+		}
+		obj.Sp = &obj.Sv
+		obj.Tv = map[string]bool{
+			"3901": true,
+		}
+		obj.Tp = &obj.Tv
+		obj.Uv = []map[int64]bool{
+			map[int64]bool{
+				4101: true,
+			},
+			map[int64]bool{
+				4103: true,
+			},
+		}
+		obj.Up = &obj.Uv
 
 		output, err := c.Marshal(obj)
 		should.NoError(err)
@@ -108,5 +125,11 @@ func Test_marshal_struct_complex(t *testing.T) {
 		should.Equal(obj.Qv, *val.Qp)
 		should.Equal(obj.Rv, val.Rv)
 		should.Equal(obj.Rv, *val.Rp)
+		should.Equal(obj.Sv, val.Sv)
+		should.Equal(obj.Sv, *val.Sp)
+		should.Equal(obj.Tv, val.Tv)
+		should.Equal(obj.Tv, *val.Tp)
+		should.Equal(obj.Uv, val.Uv)
+		should.Equal(obj.Uv, *val.Up)
 	}
 }

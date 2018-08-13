@@ -25,6 +25,8 @@ func generalReaderOf(ttype protocol.TType) func(iter spi.Iterator) interface{} {
 		return readList
 	case protocol.TypeMap:
 		return readMap
+	case protocol.TypeSet:
+		return readSet
 	case protocol.TypeStruct:
 		return readStruct
 	default:

@@ -12,15 +12,15 @@ import (
 
 var byteSliceType = reflect.TypeOf(([]byte)(nil))
 
-func DecoderOf(extension spi.Extension, valType reflect.Type) spi.ValDecoder {
+func DecoderOf(extension spi.Extension, valType reflect.Type, boolMapAsSet bool) spi.ValDecoder {
 	if valType.Kind() != reflect.Ptr {
 		return &valDecoderAdapter{&unknownDecoder{
 			prefix: "unmarshal into non-pointer type", valType: valType}}
 	}
-	return &valDecoderAdapter{decoderOf(extension, "", valType.Elem())}
+	return &valDecoderAdapter{decoderOf(extension, "", valType.Elem(), boolMapAsSet)}
 }
 
-func decoderOf(extension spi.Extension, prefix string, valType reflect.Type) internalDecoder {
+func decoderOf(extension spi.Extension, prefix string, valType reflect.Type, boolMapAsSet bool) internalDecoder {
 	extDecoder := extension.DecoderOf(reflect.PtrTo(valType))
 	if extDecoder != nil {
 		valObj := reflect.New(valType).Interface()
@@ -62,25 +62,31 @@ func decoderOf(extension spi.Extension, prefix string, valType reflect.Type) int
 		return &stringDecoder{}
 	case reflect.Ptr:
 		return &pointerDecoder{
-			valType: valType.Elem(),
-			valDecoder: decoderOf(extension, prefix+" [ptrElem]", valType.Elem()),
+			valType:    valType.Elem(),
+			valDecoder: decoderOf(extension, prefix+" [ptrElem]", valType.Elem(), boolMapAsSet),
 		}
 	case reflect.Slice:
 		return &sliceDecoder{
 			elemType:    valType.Elem(),
 			sliceType:   valType,
-			elemDecoder: decoderOf(extension, prefix+" [sliceElem]", valType.Elem()),
+			elemDecoder: decoderOf(extension, prefix+" [sliceElem]", valType.Elem(), boolMapAsSet),
 		}
 	case reflect.Map:
 		sampleObj := reflect.New(valType).Interface()
-		return &mapDecoder{
+		decoder := &mapDecoder{
 			keyType:      valType.Key(),
-			keyDecoder:   decoderOf(extension, prefix+" [mapKey]", valType.Key()),
+			keyDecoder:   decoderOf(extension, prefix+" [mapKey]", valType.Key(), boolMapAsSet),
 			elemType:     valType.Elem(),
-			elemDecoder:  decoderOf(extension, prefix+" [mapElem]", valType.Elem()),
+			elemDecoder:  decoderOf(extension, prefix+" [mapElem]", valType.Elem(), boolMapAsSet),
 			mapType:      valType,
 			mapInterface: *(*emptyInterface)(unsafe.Pointer(&sampleObj)),
+			tType:        protocol.TypeMap,
 		}
+		// FIXME: is there any reasonable way to auto distinct map and set?
+		if boolMapAsSet && valType.Elem().Kind() == reflect.Bool {
+			decoder.tType = protocol.TypeSet
+		}
+		return decoder
 	case reflect.Struct:
 		decoderFields := make([]structDecoderField, 0, valType.NumField())
 		decoderFieldMap := map[protocol.FieldId]structDecoderField{}
@@ -91,15 +97,18 @@ func decoderOf(extension spi.Extension, prefix string, valType reflect.Type) int
 				continue
 			}
 			decoderField := structDecoderField{
-				offset: refField.Offset,
+				offset:  refField.Offset,
 				fieldId: fieldId,
-				decoder: decoderOf(extension, prefix + " " + refField.Name, refField.Type),
+				decoder: decoderOf(extension, prefix + " " + refField.Name, refField.Type, boolMapAsSet),
+			}
+			if mDecoder, ok := decoderField.decoder.(*mapDecoder); ok {
+				mDecoder.tType = parseMapType(refField)
 			}
 			decoderFields = append(decoderFields, decoderField)
 			decoderFieldMap[fieldId] = decoderField
 		}
 		return &structDecoder{
-			fields: decoderFields,
+			fields:   decoderFields,
 			fieldMap: decoderFieldMap,
 		}
 	}
@@ -131,6 +140,15 @@ func parseFieldId(refField reflect.StructField) protocol.FieldId {
 		return -1
 	}
 	return protocol.FieldId(fieldId)
+}
+
+func parseMapType(refField reflect.StructField) protocol.TType {
+	thriftTag := refField.Tag.Get("thrift")
+	parts := strings.Split(thriftTag, ",")
+	if len(parts) >= 4 && strings.TrimSpace(parts[3]) == "set" {
+		return protocol.TypeSet
+	}
+	return protocol.TypeMap
 }
 
 type unknownDecoder struct {

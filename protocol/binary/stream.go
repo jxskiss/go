@@ -80,6 +80,14 @@ func (stream *Stream) WriteMessageHeader(header protocol.MessageHeader) {
 }
 
 func (stream *Stream) WriteListHeader(elemType protocol.TType, length int) {
+	stream.writeCollectionHeader(elemType, length)
+}
+
+func (stream *Stream) WriteSetHeader(elemType protocol.TType, length int) {
+	stream.writeCollectionHeader(elemType, length)
+}
+
+func (stream *Stream) writeCollectionHeader(elemType protocol.TType, length int) {
 	stream.buf = append(stream.buf, byte(elemType),
 		byte(length>>24), byte(length>>16), byte(length>>8), byte(length))
 }

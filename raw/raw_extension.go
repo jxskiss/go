@@ -1,8 +1,8 @@
 package raw
 
 import (
-	"reflect"
 	"github.com/thrift-iterator/go/spi"
+	"reflect"
 )
 
 type Extension struct {
@@ -14,6 +14,8 @@ func (extension *Extension) DecoderOf(valType reflect.Type) spi.ValDecoder {
 		return &rawListDecoder{}
 	case reflect.TypeOf((*Map)(nil)):
 		return &rawMapDecoder{}
+	case reflect.TypeOf((*Set)(nil)):
+		return &rawSetDecoder{}
 	case reflect.TypeOf((*Struct)(nil)):
 		return &rawStructDecoder{}
 	}
@@ -26,6 +28,8 @@ func (extension *Extension) EncoderOf(valType reflect.Type) spi.ValEncoder {
 		return &rawListEncoder{}
 	case reflect.TypeOf((*Map)(nil)).Elem():
 		return &rawMapEncoder{}
+	case reflect.TypeOf((*Set)(nil)).Elem():
+		return &rawSetEncoder{}
 	case reflect.TypeOf((*Struct)(nil)).Elem():
 		return &rawStructEncoder{}
 	}

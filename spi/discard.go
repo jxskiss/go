@@ -20,8 +20,21 @@ func DiscardStruct(iter Iterator) {
 
 func DiscardMap(iter Iterator) {
 	keyType, elemType, size := iter.ReadMapHeader()
+	if elemType == 0 { // set
+		for i := 0; i < size; i++ {
+			iter.Discard(keyType)
+		}
+		return
+	}
 	for i := 0; i < size; i++ {
 		iter.Discard(keyType)
+		iter.Discard(elemType)
+	}
+}
+
+func DiscardSet(iter Iterator) {
+	elemType, size := iter.ReadSetHeader()
+	for i := 0; i < size; i++ {
 		iter.Discard(elemType)
 	}
 }

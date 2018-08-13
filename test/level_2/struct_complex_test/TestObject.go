@@ -51,4 +51,10 @@ type TestObject struct {
 	Qp *map[int32][]string              `thrift:"qp,34,optional"`
 	Rv []map[string][]map[string]int32  `thrift:"rv,35,optional"`
 	Rp *[]map[string][]map[string]int32 `thrift:"rp,36,optional"`
+	Sv map[int32]bool                   `thrift:"sv,37,optional,set"`
+	Sp *map[int32]bool                  `thrift:"sp,38,optional,set"`
+	Tv map[string]bool                  `thrift:"tv,39,,set"`
+	Tp *map[string]bool                 `thrift:"tp,40,,set"`
+	Uv []map[int64]bool                 `thrift:"uv,41"`
+	Up *[]map[int64]bool                `thrift:"up,42"`
 }

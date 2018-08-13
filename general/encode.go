@@ -36,6 +36,8 @@ func generalWriterOf(sample interface{}) (protocol.TType, func(val interface{}, 
 		return protocol.TypeList, writeList
 	case Map:
 		return protocol.TypeMap, writeMap
+	case Set:
+		return protocol.TypeSet, writeSet
 	case Struct:
 		return protocol.TypeStruct, writeStruct
 	default:

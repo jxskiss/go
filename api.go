@@ -12,9 +12,10 @@ var ProtocolBinary Protocol = 1
 var ProtocolCompact Protocol = 2
 
 type Config struct {
-	Protocol      Protocol
-	StaticCodegen bool
-	Extensions    spi.Extensions
+	Protocol            Protocol
+	StaticCodegen       bool
+	DisableBoolMapAsSet bool
+	Extensions          spi.Extensions
 }
 
 type API interface {

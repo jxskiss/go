@@ -32,6 +32,10 @@ func (iter *Iterator) SkipList(space []byte) []byte {
 	return iter.skip(func() { iter.Discard(protocol.TypeList) }, space)
 }
 
+func (iter *Iterator) SkipSet(space []byte) []byte {
+	return iter.skip(func() { iter.Discard(protocol.TypeSet) }, space)
+}
+
 func (iter *Iterator) SkipMap(space []byte) []byte {
 	return iter.skip(func() { iter.Discard(protocol.TypeMap) }, space)
 }

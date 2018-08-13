@@ -135,6 +135,14 @@ func (iter *Iterator) ReadStructField() (fieldType protocol.TType, fieldId proto
 }
 
 func (iter *Iterator) ReadListHeader() (elemType protocol.TType, size int) {
+	return iter.readCollectionHeader()
+}
+
+func (iter *Iterator) ReadSetHeader() (elemType protocol.TType, size int) {
+	return iter.readCollectionHeader()
+}
+
+func (iter *Iterator) readCollectionHeader() (elemType protocol.TType, size int) {
 	b := iter.readSmall(5)
 	elemType = protocol.TType(b[0])
 	size = int(uint32(b[4]) | uint32(b[3])<<8 | uint32(b[2])<<16 | uint32(b[1])<<24)
@@ -145,6 +153,21 @@ func (iter *Iterator) ReadMapHeader() (keyType protocol.TType, elemType protocol
 	b := iter.readSmall(6)
 	keyType = protocol.TType(b[0])
 	elemType = protocol.TType(b[1])
+	// Assume that set length will never take more than 24 bits (16777215),
+	// then the leftmost byte of set length will always be zero, and the
+	// element type of map will never be zero (STOP).
+	if elemType == 0 {
+		size = int(uint32(b[4]) | uint32(b[3])<<8 | uint32(b[2])<<16 | uint32(b[1])<<24)
+		if len(iter.preread) == 0 {
+			iter.preread = []byte{b[5]}
+		} else {
+			buf := make([]byte, len(iter.preread) + 1)
+			buf[0] = b[5]
+			copy(buf[1:], iter.preread)
+			iter.preread = buf
+		}
+		return keyType, 0, size
+	}
 	size = int(uint32(b[5]) | uint32(b[4])<<8 | uint32(b[3])<<16 | uint32(b[2])<<24)
 	return keyType, elemType, size
 }
